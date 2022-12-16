@@ -141,25 +141,18 @@ async function main() {
     if (!work_checkin.error) {
       console.log(`>> ${dayjs().format(format)} 点击上班按钮 `);
       await work_checkin.click();
-      checkin.status = 2;
-      checkin.time = 0;
-      if (QQ_NOTICE_ID && qqClient) {
-        qqClient
-          .pickUser(Number(QQ_NOTICE_ID))
-          .sendMsg(`上班打卡成功: ${dayjs().format(format)}`);
-      }
     } else if (!off_work_checkin.error) {
       console.log(`>> ${dayjs().format(format)} 点击下班按钮 `);
       await off_work_checkin.click();
-      checkin.status = 2;
-      checkin.time = 0;
-      if (QQ_NOTICE_ID && qqClient) {
-        qqClient
-          .pickUser(Number(QQ_NOTICE_ID))
-          .sendMsg(`下班打卡成功: ${dayjs().format(format)}`);
-      }
     }
     console.log(`>> ${dayjs().format(format)} 打卡结束 `);
+    checkin.status = 2;
+    checkin.time = 0;
+    if (QQ_NOTICE_ID && qqClient) {
+      qqClient
+        .pickUser(Number(QQ_NOTICE_ID))
+        .sendMsg(`打卡成功: ${dayjs().format(format)}`);
+    }
     await client.closeApp();
     await client.deleteSession();
   } catch (err) {
@@ -187,7 +180,6 @@ const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
 
 // 周一至周五下午 19 点到 20 点之间每分钟执行一次
 const end_job = new CronJob("0 * 17-20 * * 1-5", () => {
-  console.log(`>> ${dayjs().format(format)} `);
   if (!checkin.time) {
     // 随机一个打卡时间,避免每天打卡时间一致
     checkin.time = randomValue(2, 58);
