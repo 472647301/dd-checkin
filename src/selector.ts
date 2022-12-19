@@ -31,4 +31,6 @@ export const rimet_xml = {
    */
   login:
     'android=new UiSelector().resourceId("com.alibaba.android.rimet:id/tv")',
+  session_item:
+    'android=new UiSelector().resourceId("com.alibaba.android.rimet:id/session_item").enabled(true).instance(0)',
 };
