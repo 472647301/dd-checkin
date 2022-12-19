@@ -128,30 +128,42 @@ async function main() {
       console.error("进入主页面失败");
       return;
     }
-    console.log(`>> ${dayjs().format(format)} 查找打卡按钮 `);
-    const enter_checkin = await client.$(rimet_xml.enter_checkin);
-    console.log(`>> ${dayjs().format(format)} 点击打卡按钮 `);
-    await enter_checkin.click();
-    await waitForDisplayed(5);
-    console.log(`>> ${dayjs().format(format)} 查找上班/下班按钮 `);
-    const [work_checkin, off_work_checkin] = await Promise.all([
-      client.$(rimet_xml.work_checkin),
-      client.$(rimet_xml.off_work_checkin),
-    ]);
-    if (!work_checkin.error) {
-      console.log(`>> ${dayjs().format(format)} 点击上班按钮 `);
-      await work_checkin.click();
-    } else if (!off_work_checkin.error) {
-      console.log(`>> ${dayjs().format(format)} 点击下班按钮 `);
-      await off_work_checkin.click();
+    let msg = "";
+    console.log(`>> ${dayjs().format(format)} 等待极速打卡执行 `);
+    await waitForDisplayed(10); // 等待10s检查极速打卡结果
+    const session_item = await client.$(rimet_xml.session_item);
+    const desc = await session_item.getAttribute("content-desc").catch(() => {
+      // 避免 session_item 不存在报错
+    });
+    if (!session_item.error && desc && desc.indexOf("极速打卡") !== -1) {
+      // 极速打卡成功
+      msg = desc;
+    } else {
+      console.log(`>> ${dayjs().format(format)} 查找打卡按钮 `);
+      const enter_checkin = await client.$(rimet_xml.enter_checkin);
+      console.log(`>> ${dayjs().format(format)} 点击打卡按钮 `);
+      await enter_checkin.click();
+      await waitForDisplayed(5);
+      console.log(`>> ${dayjs().format(format)} 查找上班/下班按钮 `);
+      const [work_checkin, off_work_checkin] = await Promise.all([
+        client.$(rimet_xml.work_checkin),
+        client.$(rimet_xml.off_work_checkin),
+      ]);
+      if (!work_checkin.error) {
+        console.log(`>> ${dayjs().format(format)} 点击上班按钮 `);
+        await work_checkin.click();
+      } else if (!off_work_checkin.error) {
+        console.log(`>> ${dayjs().format(format)} 点击下班按钮 `);
+        await off_work_checkin.click();
+      }
+      // @tip 暂时缺少对结果页面的检查
+      msg = `打卡成功: ${dayjs().format(format)}`;
     }
-    console.log(`>> ${dayjs().format(format)} 打卡结束 `);
+    console.log(`>> ${dayjs().format(format)} ${msg} `);
     checkin.status = 2;
     checkin.time = 0;
     if (QQ_NOTICE_ID && qqClient) {
-      qqClient
-        .pickUser(Number(QQ_NOTICE_ID))
-        .sendMsg(`打卡成功: ${dayjs().format(format)}`);
+      qqClient.pickUser(Number(QQ_NOTICE_ID)).sendMsg(msg);
     }
     await client.closeApp();
     await client.deleteSession();
@@ -167,7 +179,7 @@ async function main() {
 const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
   if (!checkin.time) {
     // 随机一个打卡时间,避免每天打卡时间一致
-    checkin.time = randomValue(2, 58);
+    checkin.time = randomValue(30, 45);
     console.log(`>> ${dayjs().format(format)} 初始化打卡的时间 `, checkin.time);
   }
   const mm = dayjs().format("mm");
@@ -178,11 +190,11 @@ const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
   }
 });
 
-// 周一至周五下午 19 点到 20 点之间每分钟执行一次
-const end_job = new CronJob("0 * 17-20 * * 1-5", () => {
+// 周一至周五下午 18 点到 19 点之间每分钟执行一次
+const end_job = new CronJob("0 * 18-19 * * 1-5", () => {
   if (!checkin.time) {
     // 随机一个打卡时间,避免每天打卡时间一致
-    checkin.time = randomValue(2, 58);
+    checkin.time = randomValue(45, 55);
     console.log(`>> ${dayjs().format(format)} 初始化打卡的时间 `, checkin.time);
   }
   const mm = dayjs().format("mm");
