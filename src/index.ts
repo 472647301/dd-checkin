@@ -24,6 +24,18 @@ if (QQ_ID && QQ_PASSWORD) {
     );
   });
   qqClient.login(QQ_PASSWORD);
+  qqClient.on("message.private", (e) => {
+    const msg = e.message[0];
+    if (msg.type === "text" && msg.text) {
+      console.log(" >> message.private:", msg.text);
+      if (msg.text.indexOf("run-work") !== -1) {
+        main("work");
+      }
+      if (msg.text.indexOf("run-rest") !== -1) {
+        main("rest");
+      }
+    }
+  });
 }
 
 const format = "YYYY-MM-DD HH:mm:ss";
@@ -55,6 +67,8 @@ const checkin = {
    * 2  打卡成功
    */
   status: 0,
+  work_day: 0,
+  rest_day: 0,
 };
 
 /**
@@ -70,10 +84,7 @@ async function waitForDisplayed(s: number) {
   });
 }
 
-async function main() {
-  if (checkin.status > 0) {
-    return;
-  }
+async function main(type: "work" | "rest") {
   checkin.status = 1;
   const client = await remote(opts);
   try {
@@ -162,6 +173,11 @@ async function main() {
     console.log(`>> ${dayjs().format(format)} ${msg} `);
     checkin.status = 2;
     checkin.time = 0;
+    if (type === "work") {
+      checkin.work_day = new Date().getDay();
+    } else {
+      checkin.rest_day = new Date().getDay();
+    }
     if (QQ_NOTICE_ID && qqClient) {
       qqClient.pickUser(Number(QQ_NOTICE_ID)).sendMsg(msg);
     }
@@ -179,14 +195,23 @@ async function main() {
 const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
   if (!checkin.time) {
     // 随机一个打卡时间,避免每天打卡时间一致
-    checkin.time = randomValue(30, 45);
+    checkin.time = randomValue(25, 45);
     console.log(`>> ${dayjs().format(format)} 初始化打卡的时间 `, checkin.time);
   }
+  if (checkin.work_day) {
+    const day = new Date().getDay();
+    if (checkin.work_day === day) {
+      return;
+    }
+    checkin.time = 0;
+    checkin.status = 0;
+    checkin.work_day = 0;
+  }
   const mm = dayjs().format("mm");
-  if (Number(mm) >= checkin.time) {
+  if (Number(mm) >= checkin.time && checkin.status < 0) {
     // 到达指定打卡时间段,开始打卡
     console.log(`>> ${dayjs().format(format)} 到达指定打卡时间段,开始打卡 `);
-    main();
+    main("work");
   }
 });
 
@@ -197,11 +222,20 @@ const end_job = new CronJob("0 * 18-19 * * 1-5", () => {
     checkin.time = randomValue(45, 55);
     console.log(`>> ${dayjs().format(format)} 初始化打卡的时间 `, checkin.time);
   }
+  if (checkin.rest_day) {
+    const day = new Date().getDay();
+    if (checkin.rest_day === day) {
+      return;
+    }
+    checkin.time = 0;
+    checkin.status = 0;
+    checkin.rest_day = 0;
+  }
   const mm = dayjs().format("mm");
-  if (Number(mm) >= checkin.time) {
+  if (Number(mm) >= checkin.time && checkin.status < 0) {
     // 到达指定打卡时间段,开始打卡
     console.log(`>> ${dayjs().format(format)} 到达指定打卡时间段,开始打卡 `);
-    main();
+    main("rest");
   }
 });
 
