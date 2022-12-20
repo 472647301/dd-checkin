@@ -177,8 +177,20 @@ async function main(type: "work" | "rest", excludeExtremeSpeed?: boolean) {
         console.log(`>> ${dayjs().format(format)} 点击下班按钮 `);
         await off_work_checkin.click();
       }
-      // @tip 暂时缺少对结果页面的检查
-      msg = `打卡成功: ${dayjs().format(format)}`;
+      await waitForDisplayed(20);
+      const [work_checkin_succ, off_work_checkin_succ] = await Promise.all([
+        client.$(rimet_xml.work_checkin_succ),
+        client.$(rimet_xml.off_work_checkin_succ),
+      ]);
+      if (!work_checkin_succ.error || !off_work_checkin_succ.error) {
+        msg = `打卡成功: ${dayjs().format(format)}`;
+      }
+    }
+    if (!msg) {
+      await client.closeApp();
+      await client.lock();
+      await client.deleteSession();
+      return;
     }
     console.log(`>> ${dayjs().format(format)} ${msg} `);
     checkin.status = 2;
