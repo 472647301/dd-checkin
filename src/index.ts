@@ -184,9 +184,9 @@ async function main(type: "work" | "rest", excludeExtremeSpeed?: boolean) {
     checkin.status = 2;
     checkin.time = 0;
     if (type === "work") {
-      checkin.work_day = new Date().getDay();
+      checkin.work_day = new Date().getDate();
     } else {
-      checkin.rest_day = new Date().getDay();
+      checkin.rest_day = new Date().getDate();
     }
     if (QQ_NOTICE_ID && qqClient) {
       qqClient.pickUser(Number(QQ_NOTICE_ID)).sendMsg(msg);
@@ -212,7 +212,7 @@ const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
     console.log(`>> ${dayjs().format(format)} 初始化打卡的时间 `, checkin.time);
   }
   if (checkin.work_day) {
-    const day = new Date().getDay();
+    const day = new Date().getDate();
     if (checkin.work_day === day) {
       return;
     }
@@ -237,7 +237,7 @@ const end_job = new CronJob("0 * 18-19 * * 1-5", () => {
     console.log(`>> ${dayjs().format(format)} 初始化打卡的时间 `, checkin.time);
   }
   if (checkin.rest_day) {
-    const day = new Date().getDay();
+    const day = new Date().getDate();
     if (checkin.rest_day === day) {
       return;
     }
