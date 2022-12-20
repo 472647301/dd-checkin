@@ -112,7 +112,7 @@ async function main(type: "work" | "rest") {
       await client.keys(PHONE.split("")).catch(() => {
         // 这里必然会报错，添加 catch 避免影响后续
       });
-      await waitForDisplayed(5);
+      await waitForDisplayed(10);
       console.log(`>> ${dayjs().format(format)} 查找密码输入框 `);
       const et_password = await client.$(rimet_xml.et_password);
       console.log(`>> ${dayjs().format(format)} 点击密码输入框 `);
@@ -123,17 +123,17 @@ async function main(type: "work" | "rest") {
       await client.keys(PASSWORD.split("")).catch(() => {
         // 这里必然会报错，添加 catch 避免影响后续
       });
-      await waitForDisplayed(5);
+      await waitForDisplayed(10);
       console.log(`>> ${dayjs().format(format)} 查找隐私协议按钮 `);
       const cb_privacy = await client.$(rimet_xml.cb_privacy);
       console.log(`>> ${dayjs().format(format)} 点击隐私协议按钮 `);
       await cb_privacy.click();
-      await waitForDisplayed(3);
+      await waitForDisplayed(6);
       console.log(`>> ${dayjs().format(format)} 查找登录按钮 `);
       const login = await client.$(rimet_xml.login);
       console.log(`>> ${dayjs().format(format)} 点击登录按钮 `);
       await login.click();
-      await waitForDisplayed(5);
+      await waitForDisplayed(10);
     }
     const current_activity = await client.getCurrentActivity();
     console.log(
@@ -146,7 +146,7 @@ async function main(type: "work" | "rest") {
     }
     let msg = "";
     console.log(`>> ${dayjs().format(format)} 等待极速打卡执行 `);
-    await waitForDisplayed(10); // 等待10s检查极速打卡结果
+    await waitForDisplayed(20); // 等待10s检查极速打卡结果
     const session_item = await client.$(rimet_xml.session_item);
     const desc = await session_item.getAttribute("content-desc").catch(() => {
       // 避免 session_item 不存在报错
@@ -159,7 +159,7 @@ async function main(type: "work" | "rest") {
       const enter_checkin = await client.$(rimet_xml.enter_checkin);
       console.log(`>> ${dayjs().format(format)} 点击打卡按钮 `);
       await enter_checkin.click();
-      await waitForDisplayed(5);
+      await waitForDisplayed(20);
       console.log(`>> ${dayjs().format(format)} 查找上班/下班按钮 `);
       const [work_checkin, off_work_checkin] = await Promise.all([
         client.$(rimet_xml.work_checkin),
