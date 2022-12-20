@@ -13,17 +13,17 @@ let qqClient: Client | null = null;
 const PHONE = process.env.PHONE;
 const PASSWORD = process.env.PASSWORD;
 const QQ_ID = process.env.QQ_ID;
-const QQ_PASSWORD = process.env.QQ_PASSWORD;
 const QQ_NOTICE_ID = process.env.QQ_NOTICE_ID;
 
-if (QQ_ID && QQ_PASSWORD) {
+if (QQ_ID) {
   qqClient = createClient(Number(QQ_ID));
-  qqClient.on("system.login.slider", function () {
-    process.stdin.once("data", (ticket) =>
-      this.submitSlider(String(ticket).trim())
-    );
+  qqClient.on("system.login.qrcode", function () {
+    //扫码后按回车登录
+    process.stdin.once("data", () => {
+      this.login();
+    });
   });
-  qqClient.login(QQ_PASSWORD);
+  qqClient.login();
   qqClient.on("message.private", (e) => {
     const msg = e.message[0];
     if (msg.type === "text" && msg.text) {
