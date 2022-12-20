@@ -200,6 +200,7 @@ async function main(type: "work" | "rest") {
 
 // 周一至周五上午 9 点到 10 点之间每分钟执行一次
 const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
+  console.log(" >> checkin:", JSON.stringify(checkin));
   if (!checkin.time) {
     // 随机一个打卡时间,避免每天打卡时间一致
     checkin.time = randomValue(25, 45);
@@ -215,7 +216,7 @@ const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
     checkin.work_day = 0;
   }
   const mm = dayjs().format("mm");
-  if (Number(mm) >= checkin.time && checkin.status < 0) {
+  if (Number(mm) >= checkin.time && checkin.status < 1) {
     // 到达指定打卡时间段,开始打卡
     console.log(`>> ${dayjs().format(format)} 到达指定打卡时间段,开始打卡 `);
     main("work");
@@ -224,6 +225,7 @@ const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
 
 // 周一至周五下午 18 点到 19 点之间每分钟执行一次
 const end_job = new CronJob("0 * 18-19 * * 1-5", () => {
+  console.log(" >> checkin:", JSON.stringify(checkin));
   if (!checkin.time) {
     // 随机一个打卡时间,避免每天打卡时间一致
     checkin.time = randomValue(45, 55);
@@ -239,7 +241,7 @@ const end_job = new CronJob("0 * 18-19 * * 1-5", () => {
     checkin.rest_day = 0;
   }
   const mm = dayjs().format("mm");
-  if (Number(mm) >= checkin.time && checkin.status < 0) {
+  if (Number(mm) >= checkin.time && checkin.status < 1) {
     // 到达指定打卡时间段,开始打卡
     console.log(`>> ${dayjs().format(format)} 到达指定打卡时间段,开始打卡 `);
     main("rest");
