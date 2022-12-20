@@ -87,6 +87,10 @@ async function waitForDisplayed(s: number) {
 async function main(type: "work" | "rest") {
   checkin.status = 1;
   const client = await remote(opts);
+  const is_locked = await client.isLocked();
+  if (is_locked) {
+    await client.unlock();
+  }
   try {
     const activity = await client.getCurrentActivity();
     console.log(`>> ${dayjs().format(format)} 启动 Activity `, activity);
@@ -104,6 +108,7 @@ async function main(type: "work" | "rest") {
       console.log(`>> ${dayjs().format(format)} 清除手机号输入框 `);
       await et_phone.clearValue();
       console.log(`>> ${dayjs().format(format)} 输入需要登录的手机号 `, PHONE);
+      // @see http://appium.io/docs/en/commands/device/keys/press-keycode/
       await client.keys(PHONE.split("")).catch(() => {
         // 这里必然会报错，添加 catch 避免影响后续
       });
@@ -183,10 +188,12 @@ async function main(type: "work" | "rest") {
     }
     await client.closeApp();
     await client.deleteSession();
+    await client.lock();
   } catch (err) {
     checkin.status = -1;
     await client.closeApp();
     await client.deleteSession();
+    await client.lock();
     console.error(err);
   }
 }
