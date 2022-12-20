@@ -29,10 +29,10 @@ if (QQ_ID) {
     if (msg.type === "text" && msg.text) {
       console.log(" >> message.private:", msg.text);
       if (msg.text.indexOf("run-work") !== -1) {
-        main("work");
+        main("work", msg.text.indexOf("true") !== -1);
       }
       if (msg.text.indexOf("run-rest") !== -1) {
-        main("rest");
+        main("rest", msg.text.indexOf("true") !== -1);
       }
     }
   });
@@ -84,7 +84,7 @@ async function waitForDisplayed(s: number) {
   });
 }
 
-async function main(type: "work" | "rest") {
+async function main(type: "work" | "rest", excludeExtremeSpeed?: boolean) {
   checkin.status = 1;
   const client = await remote(opts);
   const is_locked = await client.isLocked();
@@ -151,7 +151,12 @@ async function main(type: "work" | "rest") {
     const desc = await session_item.getAttribute("content-desc").catch(() => {
       // 避免 session_item 不存在报错
     });
-    if (!session_item.error && desc && desc.indexOf("极速打卡") !== -1) {
+    if (
+      !session_item.error &&
+      desc &&
+      desc.indexOf("极速打卡") !== -1 &&
+      !excludeExtremeSpeed
+    ) {
       // 极速打卡成功
       msg = desc;
     } else {
