@@ -14,6 +14,8 @@ export const rimet_xml = {
   /**
    * 下班打卡
    */
+  off_work_checkin:
+    'android=new UiSelector().className("android.view.View").text("下班打卡")',
   off_work_checkin_succ:
     'android=new UiSelector().className("android.view.View").text("下班打卡成功")',
   /**
