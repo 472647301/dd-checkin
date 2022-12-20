@@ -192,13 +192,13 @@ async function main(type: "work" | "rest", excludeExtremeSpeed?: boolean) {
       qqClient.pickUser(Number(QQ_NOTICE_ID)).sendMsg(msg);
     }
     await client.closeApp();
-    await client.deleteSession();
     await client.lock();
+    await client.deleteSession();
   } catch (err) {
     checkin.status = -1;
     await client.closeApp();
-    await client.deleteSession();
     await client.lock();
+    await client.deleteSession();
     console.error(err);
   }
 }
