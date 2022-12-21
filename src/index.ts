@@ -1,6 +1,5 @@
 import { rimet_xml } from "./selector";
 import { remote, RemoteOptions } from "webdriverio";
-import { createClient, Client } from "oicq";
 import { exec, ChildProcess } from "child_process";
 import { resolve } from "path";
 import { CronJob } from "cron";
@@ -9,36 +8,10 @@ import dayjs from "dayjs";
 
 config();
 
-let qqClient: Client | null = null;
 let appium: ChildProcess | null = null;
 
 const PHONE = process.env.PHONE;
 const PASSWORD = process.env.PASSWORD;
-const QQ_ID = process.env.QQ_ID;
-const QQ_NOTICE_ID = process.env.QQ_NOTICE_ID;
-
-if (QQ_ID) {
-  qqClient = createClient(Number(QQ_ID));
-  qqClient.on("system.login.qrcode", function () {
-    //扫码后按回车登录
-    process.stdin.once("data", () => {
-      this.login();
-    });
-  });
-  qqClient.login();
-  qqClient.on("message.private", (e) => {
-    const msg = e.message[0];
-    if (msg.type === "text" && msg.text) {
-      console.log(" >> message.private:", msg.text);
-      if (msg.text.indexOf("run-work") !== -1) {
-        main("work", msg.text.indexOf("true") !== -1);
-      }
-      if (msg.text.indexOf("run-rest") !== -1) {
-        main("rest", msg.text.indexOf("true") !== -1);
-      }
-    }
-  });
-}
 
 const format = "YYYY-MM-DD HH:mm:ss";
 
@@ -201,9 +174,6 @@ async function main(type: "work" | "rest", excludeExtremeSpeed?: boolean) {
       checkin.work_day = new Date().getDate();
     } else {
       checkin.rest_day = new Date().getDate();
-    }
-    if (QQ_NOTICE_ID && qqClient) {
-      qqClient.pickUser(Number(QQ_NOTICE_ID)).sendMsg(msg);
     }
     await client.closeApp();
     await client.lock();
