@@ -1,10 +1,13 @@
 import { rimet_xml } from "./selector";
 import { remote, RemoteOptions } from "webdriverio";
 import { exec, ChildProcess } from "child_process";
+import { createTransport } from "nodemailer";
+import { MailParser } from "mailparser";
 import { resolve } from "path";
 import { CronJob } from "cron";
 import { config } from "dotenv";
 import dayjs from "dayjs";
+import Imap from "imap";
 
 config();
 
@@ -12,6 +15,8 @@ let appium: ChildProcess | null = null;
 
 const PHONE = process.env.PHONE;
 const PASSWORD = process.env.PASSWORD;
+const EMAIL_USER = process.env.EMAIL_USER!;
+const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD!;
 
 const format = "YYYY-MM-DD HH:mm:ss";
 
@@ -44,12 +49,102 @@ const checkin = {
   status: 0,
   work_day: 0,
   rest_day: 0,
+  email_date: 0,
+  is_new_email: false,
 };
+
+// create reusable transporter object using the default SMTP transport
+const transporter = createTransport({
+  host: "smtp.qq.com",
+  port: 465,
+  // secure: false, // true for 465, false for other ports
+  auth: {
+    user: EMAIL_USER, // generated ethereal user
+    pass: EMAIL_PASSWORD, // generated ethereal password
+  },
+});
+
+const imap = new Imap({
+  user: EMAIL_USER,
+  password: EMAIL_PASSWORD,
+  host: "imap.qq.com",
+  port: 993,
+  tls: true,
+});
+
+imap.once("ready", () => {
+  console.log(" >> imap ready");
+  openInbox();
+});
+
+imap.once("error", () => {
+  console.log(" >> imap error");
+  imap.end();
+});
+
+imap.once("end", function () {
+  console.log(" >> imap end");
+});
+
+function openInbox() {
+  imap.openBox("INBOX", (err, box) => {
+    if (err) {
+      console.log("INBOX", err);
+      imap.end();
+      return;
+    }
+    // seqno must be greater than zero
+    const total = box.messages.total || 1;
+    const fetch = imap.seq.fetch(`${total - 1 || 1}:${total}`, {
+      bodies: "",
+      struct: true,
+    });
+    fetch.on("message", (msg) => {
+      const mailparser = new MailParser();
+      msg.on("body", (stream) => {
+        stream.pipe(mailparser);
+        mailparser.on("headers", (headers) => {
+          const date = headers.get("date") as string;
+          console.log(" >> headers date", dayjs(date).format(format));
+          const time = dayjs(date).valueOf();
+          if (!checkin.email_date) {
+            checkin.email_date = time;
+          }
+          if (checkin.email_date < time) {
+            checkin.is_new_email = true;
+          } else {
+            checkin.is_new_email = false;
+          }
+        });
+        mailparser.on("data", (data) => {
+          if (checkin.is_new_email) {
+            console.log(" >> data", data.html);
+            if (data.html.indexOf("472647301@qq.com") !== -1) {
+              if (data.html.indexOf("run-work") !== -1) {
+                main("work", data.html.indexOf("true") !== -1);
+              }
+              if (data.html.indexOf("run-rest") !== -1) {
+                main("rest", data.html.indexOf("true") !== -1);
+              }
+            }
+          }
+        });
+      });
+    });
+    fetch.once("error", function (err) {
+      console.log("fetch", err);
+      imap.end();
+    });
+    fetch.once("end", () => {
+      imap.end();
+    });
+  });
+}
 
 /**
  * 获取指定范围内的随机数
  */
-export function randomValue(min: number, max: number) {
+function randomValue(min: number, max: number) {
   return Math.floor(Math.random() * (min - max) + max);
 }
 
@@ -178,6 +273,12 @@ async function main(type: "work" | "rest", excludeExtremeSpeed?: boolean) {
     await client.closeApp();
     await client.lock();
     await client.deleteSession();
+    await transporter.sendMail({
+      from: EMAIL_USER, // sender address
+      to: "472647301@qq.com", // list of receivers
+      subject: `打卡成功 ${dayjs().format(format)}`, // Subject line
+      text: msg, // plain text body
+    });
   } catch (err) {
     checkin.status = -1;
     await client.closeApp();
@@ -189,6 +290,7 @@ async function main(type: "work" | "rest", excludeExtremeSpeed?: boolean) {
 
 // 周一至周五上午 9 点到 10 点之间每分钟执行一次
 const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
+  imap.connect();
   console.log(" >> checkin:", JSON.stringify(checkin));
   if (!checkin.time) {
     // 随机一个打卡时间,避免每天打卡时间一致
@@ -227,6 +329,7 @@ const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
 
 // 周一至周五下午 18 点到 19 点之间每分钟执行一次
 const end_job = new CronJob("0 * 18-19 * * 1-5", () => {
+  imap.connect();
   console.log(" >> checkin:", JSON.stringify(checkin));
   if (!checkin.time) {
     // 随机一个打卡时间,避免每天打卡时间一致
