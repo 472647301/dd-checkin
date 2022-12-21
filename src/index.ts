@@ -1,6 +1,7 @@
 import { rimet_xml } from "./selector";
 import { remote, RemoteOptions } from "webdriverio";
 import { createClient, Client } from "oicq";
+import { exec, ChildProcess } from "child_process";
 import { resolve } from "path";
 import { CronJob } from "cron";
 import { config } from "dotenv";
@@ -9,6 +10,7 @@ import dayjs from "dayjs";
 config();
 
 let qqClient: Client | null = null;
+let appium: ChildProcess | null = null;
 
 const PHONE = process.env.PHONE;
 const PASSWORD = process.env.PASSWORD;
@@ -223,7 +225,7 @@ const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
     checkin.time = randomValue(25, 45);
     console.log(`>> ${dayjs().format(format)} 初始化打卡的时间 `, checkin.time);
   }
-  if (checkin.work_day) {
+  if (checkin.work_day || checkin.rest_day) {
     const day = new Date().getDate();
     if (checkin.work_day === day) {
       return;
@@ -231,12 +233,25 @@ const start_job = new CronJob("0 * 9-10 * * 1-5", () => {
     checkin.time = 0;
     checkin.status = 0;
     checkin.work_day = 0;
+    checkin.rest_day = 0;
   }
   const mm = dayjs().format("mm");
   if (Number(mm) >= checkin.time && checkin.status < 1) {
     // 到达指定打卡时间段,开始打卡
     console.log(`>> ${dayjs().format(format)} 到达指定打卡时间段,开始打卡 `);
-    main("work");
+    if (appium) appium.kill();
+    appium = exec("appium server", (err, stdout, stderr) => {
+      if (err || stderr) {
+        console.log(err || stderr);
+        appium?.kill();
+        return;
+      }
+      console.log(stdout);
+      main("work").then(() => {
+        appium?.kill();
+        appium = null;
+      });
+    });
   }
 });
 
@@ -248,7 +263,7 @@ const end_job = new CronJob("0 * 18-19 * * 1-5", () => {
     checkin.time = randomValue(45, 55);
     console.log(`>> ${dayjs().format(format)} 初始化打卡的时间 `, checkin.time);
   }
-  if (checkin.rest_day) {
+  if (checkin.rest_day || checkin.work_day) {
     const day = new Date().getDate();
     if (checkin.rest_day === day) {
       return;
@@ -256,12 +271,25 @@ const end_job = new CronJob("0 * 18-19 * * 1-5", () => {
     checkin.time = 0;
     checkin.status = 0;
     checkin.rest_day = 0;
+    checkin.work_day = 0;
   }
   const mm = dayjs().format("mm");
   if (Number(mm) >= checkin.time && checkin.status < 1) {
     // 到达指定打卡时间段,开始打卡
     console.log(`>> ${dayjs().format(format)} 到达指定打卡时间段,开始打卡 `);
-    main("rest");
+    if (appium) appium.kill();
+    appium = exec("appium server", (err, stdout, stderr) => {
+      if (err || stderr) {
+        console.log(err || stderr);
+        appium?.kill();
+        return;
+      }
+      console.log(stdout);
+      main("rest").then(() => {
+        appium?.kill();
+        appium = null;
+      });
+    });
   }
 });
 
